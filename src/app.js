@@ -1,18 +1,33 @@
 const express = require("express");
-
+const connectDB = require("./config/database");
 const app = express();
+const User = require("./models/user");
 
-app.get("/getUserData" , (req,res) => {
-  throw new ERRROR("XNCNC");
-  res.send("User data");
+app.use(express.json());
+
+
+app.post("/signup",async (req,res) => {
+  console.log(req.body);
+  // creating a new instance of the user model
+  const user = new User(req.body);
+try{
+   await user.save();
+ res.send("USer adding successfully")
+} catch(err){
+  res.status(400).send("error saving");
+}
 });
 
-app.use("/" , (err , req , res , next) => {
-  if(err){
-    res.send(500).send("Something went wrong");
-  }
-});
 
-app.listen(7777 , () => {
-  console.log("Serever is running on port 7777");
-})
+
+connectDB()
+  .then(() => {
+    console.log("Data connection established");
+    app.listen(7777, () => {
+    console.log("Serever is running on port 7777");
+});
+  })
+  .catch((err) => {
+    console.error("Data base connection failed");
+  });
+
