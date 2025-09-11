@@ -37,7 +37,7 @@ app.get("/user" , async(req,res) => {
 app.delete("/user" , async(req,res) => {
   const userId = req.body.userId;
   try{
-    const user = await User.findByIdAndDelete({_id:userId});
+    const user = await User.findByIdAndDelete(userId);
     res.send("User deleted");
   }catch(err){
     res.status(400).send("spmenthing went wrong");
@@ -49,8 +49,24 @@ app.patch("/user" , async(req, res) => {
   const userId = req.body.userId;
   const data = req.body;
   try{
-    await User.findByIdAndUpdate(userId ,data);
-    res.send("user updated")
+    const user = await User.findByIdAndUpdate({_id:userId} ,data , {
+      returnDocument: "after",
+      runValidators : true, // to run the vlaidation on existing data
+    });
+    console.log(user);
+    res.send("user updated");
+  }catch(err){
+    res.status(400).send("update failed" + err.message);
+  }
+})
+
+//update using emial id
+app.patch("/user/email"  , async(req,res) => {
+  const emailId = req.body.emailId;
+  const data = req.body;
+  try{
+    await User.findOneAndUpdate({emailId:emailId} , data);
+    res.send("user updated");
   }catch(err){
     res.status(400).send("something went wrong");
   }
