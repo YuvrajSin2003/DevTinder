@@ -5,81 +5,91 @@ const User = require("./models/user");
 
 app.use(express.json());
 
-
-app.post("/signup",async (req,res) => {
+app.post("/signup", async (req, res) => {
   console.log(req.body);
   // creating a new instance of the user model
   const user = new User(req.body);
-try{
-   await user.save();
- res.send("User adding successfully")
-} catch(err){
-  res.status(400).send("error saving");
-}
+  try {
+    await user.save();
+    res.send("User adding successfully");
+  } catch (err) {
+    res.status(400).send("error saving");
+  }
 });
 
 //get user by email
-app.get("/user" , async(req,res) => {
+app.get("/user", async (req, res) => {
   const userEmail = req.body.emailId;
-  try{
-    const users = await User.find({emailId : userEmail})
-    if(users.length === 0){
+  try {
+    const users = await User.find({ emailId: userEmail });
+    if (users.length === 0) {
       return res.status(404).send("user not found");
-    }else{
-      res.send(users); 
+    } else {
+      res.send(users);
     }
-  }catch(err){
+  } catch (err) {
     res.send(400).send("something went wrong");
   }
-})
+});
 
 //to delete user
-app.delete("/user" , async(req,res) => {
+app.delete("/user", async (req, res) => {
   const userId = req.body.userId;
-  try{
+  try {
     const user = await User.findByIdAndDelete(userId);
     res.send("User deleted");
-  }catch(err){
+  } catch (err) {
     res.status(400).send("spmenthing went wrong");
   }
-})
+});
 
 // update user
-app.patch("/user" , async(req, res) => {
-  const userId = req.body.userId;
+app.patch("/user", async (req, res) => {
+  const userId = req.body?.userId;
   const data = req.body;
-  try{
-    const user = await User.findByIdAndUpdate({_id:userId} ,data , {
+  //to restrick the updation in data through api
+
+  try {
+    const ALLOWED_UPDATES = ["photoURL", "about", "gender", "ages", "skills"];
+    const isUpdateAllowed = Object.keys(data).every((k) =>
+      ALLOWED_UPDATES.includes(k)
+    );
+    if (!isUpdatedAllowed) {
+      throw new error("update not allowed");
+    }
+    if(data?.skills.length > 10){
+      throw new error("skills should not be more than 10")
+    }
+    const user = await User.findByIdAndUpdate({ _id: userId }, data, {
       returnDocument: "after",
-      runValidators : true, // to run the vlaidation on existing data
+      runValidators: true, // to run the vlaidation on existing data
     });
     console.log(user);
     res.send("user updated");
-  }catch(err){
+  } catch (err) {
     res.status(400).send("update failed" + err.message);
   }
-})
+});
 
 //update using emial id
-app.patch("/user/email"  , async(req,res) => {
+app.patch("/user/email", async (req, res) => {
   const emailId = req.body.emailId;
   const data = req.body;
-  try{
-    await User.findOneAndUpdate({emailId:emailId} , data);
+  try {
+    await User.findOneAndUpdate({ emailId: emailId }, data);
     res.send("user updated");
-  }catch(err){
+  } catch (err) {
     res.status(400).send("something went wrong");
   }
-})
+});
 
 connectDB()
   .then(() => {
     console.log("Data connection established");
     app.listen(7777, () => {
-    console.log("Serever is running on port 7777");
-});
+      console.log("Serever is running on port 7777");
+    });
   })
   .catch((err) => {
     console.error("Data base connection failed");
   });
-
