@@ -5,91 +5,83 @@ const User = require("./models/user");
 
 app.use(express.json());
 
+// Signup route
 app.post("/signup", async (req, res) => {
   console.log(req.body);
-  // creating a new instance of the user model
   const user = new User(req.body);
   try {
     await user.save();
-    res.send("User adding successfully");
+    res.send("User added successfully");
   } catch (err) {
-    res.status(400).send("error saving");
+    res.status(400).send("Error saving user: " + err.message);
   }
 });
 
-//get user by email
-app.get("/user", async (req, res) => {
-  const userEmail = req.body.emailId;
-  try {
-    const users = await User.find({ emailId: userEmail });
-    if (users.length === 0) {
-      return res.status(404).send("user not found");
-    } else {
-      res.send(users);
-    }
-  } catch (err) {
-    res.send(400).send("something went wrong");
-  }
-});
 
-//to delete user
-app.delete("/user", async (req, res) => {
-  const userId = req.body.userId;
+// Delete user
+app.delete("/user/:userId", async (req, res) => {
+  const userId = req.params?.userId;
   try {
-    const user = await User.findByIdAndDelete(userId);
+    await User.findByIdAndDelete(userId);
     res.send("User deleted");
   } catch (err) {
-    res.status(400).send("spmenthing went wrong");
+    res.status(400).send("Something went wrong");
   }
 });
 
-// update user
-app.patch("/user", async (req, res) => {
+// Update user by ID
+app.patch("/user/:userId", async (req, res) => {
   const userId = req.body?.userId;
   const data = req.body;
-  //to restrick the updation in data through api
 
   try {
-    const ALLOWED_UPDATES = ["photoURL", "about", "gender", "ages", "skills"];
+    const ALLOWED_UPDATES = ["PhotoURL", "about", "gender", "age", "skills"];
     const isUpdateAllowed = Object.keys(data).every((k) =>
       ALLOWED_UPDATES.includes(k)
     );
-    if (!isUpdatedAllowed) {
-      throw new error("update not allowed");
+
+    if (!isUpdateAllowed) {
+      throw new Error("Update not allowed");
     }
-    if(data?.skills.length > 10){
-      throw new error("skills should not be more than 10")
+
+    if (data?.skills && data.skills.length > 50) {
+      throw new Error("Skills should not be more than 10");
     }
+
     const user = await User.findByIdAndUpdate({ _id: userId }, data, {
       returnDocument: "after",
-      runValidators: true, // to run the vlaidation on existing data
+      runValidators: true,
     });
+
     console.log(user);
-    res.send("user updated");
+    res.send("User updated");
   } catch (err) {
-    res.status(400).send("update failed" + err.message);
+    res.status(400).send("Update failed: " + err.message);
   }
 });
 
-//update using emial id
+// Update using email
 app.patch("/user/email", async (req, res) => {
   const emailId = req.body.emailId;
   const data = req.body;
   try {
-    await User.findOneAndUpdate({ emailId: emailId }, data);
-    res.send("user updated");
+    await User.findOneAndUpdate({ emailId: emailId }, data, {
+      runValidators: true,
+    });
+    res.send("User updated");
   } catch (err) {
-    res.status(400).send("something went wrong");
+    res.status(400).send("Something went wrong");
   }
 });
 
+// Connect DB and start server
 connectDB()
   .then(() => {
-    console.log("Data connection established");
+    console.log("Database connection established");
     app.listen(7777, () => {
-      console.log("Serever is running on port 7777");
+      console.log("Server is running on port 7777");
     });
   })
   .catch((err) => {
-    console.error("Data base connection failed");
+    console.error("Database connection failed");
   });
