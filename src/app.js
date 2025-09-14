@@ -2,20 +2,65 @@ const express = require("express");
 const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
+const validateSignUpData = require("./utils/validation"); // fixed import
+const bcrypt = require("bcrypt");
 
 app.use(express.json());
 
 // Signup route
 app.post("/signup", async (req, res) => {
-  console.log(req.body);
-  const user = new User(req.body);
   try {
-    await user.save();
+    validateSignUpData(req);
+
+    const { firstName, lastName, emailId, password } = req.body;
+
+    // Encrypt the password
+    const passwordHash = await bcrypt.hash(password, 10);
+    console.log(passwordHash);
+
+    // Create user with hashed password
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      password: passwordHash,
+    });
+
+    await user.save(); // save user
+
     res.send("User added successfully");
   } catch (err) {
     res.status(400).send("Error saving user: " + err.message);
   }
 });
+
+//Login route
+app.post('/login', async (req , res) => {
+  try{
+    const {emailId , password} = req.body;
+    
+    const user = await User.findOne({ emailId: emailId });
+    if(!user){
+      throw new Error("Invalid credintials");
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if(isPasswordValid){ 
+
+      //create a JWT Token
+      // Add the token cookies and send the response back to the user
+
+
+
+
+
+      res.send("login successful");
+    }else{
+      throw new Error("login failed: invalid password");
+    }
+  }catch(err){
+    res.status(400).send("Login failed: " + err.message);
+  }
+})
 
 
 // Delete user
@@ -31,7 +76,7 @@ app.delete("/user/:userId", async (req, res) => {
 
 // Update user by ID
 app.patch("/user/:userId", async (req, res) => {
-  const userId = req.body?.userId;
+  const userId = req.params?.userId; 
   const data = req.body;
 
   try {
@@ -48,7 +93,7 @@ app.patch("/user/:userId", async (req, res) => {
       throw new Error("Skills should not be more than 10");
     }
 
-    const user = await User.findByIdAndUpdate({ _id: userId }, data, {
+    const user = await User.findByIdAndUpdate(userId, data, {
       returnDocument: "after",
       runValidators: true,
     });
@@ -70,7 +115,7 @@ app.patch("/user/email", async (req, res) => {
     });
     res.send("User updated");
   } catch (err) {
-    res.status(400).send("Something went wrong");
+    res.status(400).send("ERROR:" + err.message);
   }
 });
 

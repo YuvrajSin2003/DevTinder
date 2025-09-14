@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
+      lowercase: true, // ensures "Male"/"FEMALE" become "male"/"female"
       validate(value) {
         if (!["male", "female", "other"].includes(value)) {
           throw new Error("This is not a valid gender");
@@ -49,6 +50,11 @@ const userSchema = new mongoose.Schema(
     },
     skills: {
       type: [String],
+      validate(value) {
+        if (value.length > 10) {   // fixed mismatch with error message
+          throw new Error("Skills should not be more than 10");
+        }
+      },
     },
     PhotoURL: {
       type: String,
