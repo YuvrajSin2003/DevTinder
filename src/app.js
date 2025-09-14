@@ -2,12 +2,30 @@ const express = require("express");
 const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
-const validateSignUpData = require("./utils/validation"); // fixed import
+const validateSignUpData = require("./utils/validation"); 
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 
 app.use(express.json());
+app.use(cookieParser()); 
+// --------------------- AUTH MIDDLEWARE ---------------------
+const auth = (req, res, next) => {
+  try {
+    const { token } = req.cookies;
+    if (!token) {
+      return res.status(401).send("No token, please log in");
+    }
 
-// Signup route
+    const decoded = jwt.verify(token, "DEV@Tinder$7900");
+    req.user = decoded; 
+    next();
+  } catch (err) {
+    return res.status(401).send("Invalid or expired token");
+  }
+};
+
+// --------------------- SIGNUP ROUTE ---------------------
 app.post("/signup", async (req, res) => {
   try {
     validateSignUpData(req);
@@ -16,7 +34,6 @@ app.post("/signup", async (req, res) => {
 
     // Encrypt the password
     const passwordHash = await bcrypt.hash(password, 10);
-    console.log(passwordHash);
 
     // Create user with hashed password
     const user = new User({
@@ -26,44 +43,69 @@ app.post("/signup", async (req, res) => {
       password: passwordHash,
     });
 
-    await user.save(); // save user
-
+    await user.save();
     res.send("User added successfully");
   } catch (err) {
     res.status(400).send("Error saving user: " + err.message);
   }
 });
 
-//Login route
-app.post('/login', async (req , res) => {
-  try{
-    const {emailId , password} = req.body;
-    
-    const user = await User.findOne({ emailId: emailId });
-    if(!user){
-      throw new Error("Invalid credintials");
+// --------------------- LOGIN ROUTE ---------------------
+app.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+
+    const user = await User.findOne({ emailId });
+    if (!user) {
+      throw new Error("Invalid credentials");
     }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if(isPasswordValid){ 
+    if (isPasswordValid) {
+      // Create a JWT Token
+      const token = jwt.sign({ _id: user._id }, "DEV@Tinder$7900", {
+        expiresIn: "7d",
+      });
 
-      //create a JWT Token
-      // Add the token cookies and send the response back to the user
+      // Add the token to cookies
+      res.cookie("token", token, {
+        httpOnly: true,   // secure against XSS
+        secure: false,    // set to true in production (HTTPS)
+        sameSite: "strict",
+      });
 
-
-
-
-
-      res.send("login successful");
-    }else{
-      throw new Error("login failed: invalid password");
+      res.send("Login successful");
+    } else {
+      throw new Error("Invalid password");
     }
-  }catch(err){
+  } catch (err) {
     res.status(400).send("Login failed: " + err.message);
   }
-})
+});
 
+// --------------------- PROFILE ROUTE ---------------------
+app.get("/profile", async (req, res) => {
+try{  const cookies = req.cookies;
+  const {token} = cookies
+  if(!token){
+    throw new Error("Invalid token ");
+  }
+  const decodeMessage = await jwt.verify(token, "DEV@Tinder$7900"); //compare actual pass and hashed pass
+  console.log(decodeMessage);
+ const {_id} = decodeMessage;
+ console.log("logged in user. :" + _id);
+ const user = await User.findById(_id);
+ if(!token){
+    throw new Error("Invalid user ");
+  }
+  res.send(user);
+}
+catch(err){
+  res.status(400).send("ERROR : "+ err.message);
+}
+});
 
-// Delete user
+// --------------------- DELETE USER ---------------------
 app.delete("/user/:userId", async (req, res) => {
   const userId = req.params?.userId;
   try {
@@ -74,7 +116,7 @@ app.delete("/user/:userId", async (req, res) => {
   }
 });
 
-// Update user by ID
+// --------------------- UPDATE USER BY ID ---------------------
 app.patch("/user/:userId", async (req, res) => {
   const userId = req.params?.userId; 
   const data = req.body;
@@ -105,12 +147,12 @@ app.patch("/user/:userId", async (req, res) => {
   }
 });
 
-// Update using email
+// --------------------- UPDATE USING EMAIL ---------------------
 app.patch("/user/email", async (req, res) => {
   const emailId = req.body.emailId;
   const data = req.body;
   try {
-    await User.findOneAndUpdate({ emailId: emailId }, data, {
+    await User.findOneAndUpdate({ emailId }, data, {
       runValidators: true,
     });
     res.send("User updated");
@@ -119,7 +161,7 @@ app.patch("/user/email", async (req, res) => {
   }
 });
 
-// Connect DB and start server
+// --------------------- CONNECT DB & START SERVER ---------------------
 connectDB()
   .then(() => {
     console.log("Database connection established");
@@ -128,5 +170,5 @@ connectDB()
     });
   })
   .catch((err) => {
-    console.error("Database connection failed");
+    console.error("Database connection failed", err);
   });
