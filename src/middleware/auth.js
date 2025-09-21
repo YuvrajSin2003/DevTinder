@@ -4,16 +4,16 @@ const User = require("../models/user");
 const userAuth = async (req, res, next) => {
   try {
     // read token from cookies
-    const { token } = req.cookies;
+    const { token } = req.cookies; // extract token form cookies
     if (!token) {
       return res.status(401).send("No token provided, please log in");
     }
-
+ 
     // verify token
     const decodedObj = jwt.verify(token, "DEV@Tinder$7900");
-    const { _id } = decodedObj;
+    const { _id } = decodedObj; // finding the id
 
-    // find user
+    // if id present in DB  find user
     const user = await User.findById(_id);
     if (!user) {
       return res.status(404).send("User not found");

@@ -9,7 +9,9 @@ const jwt = require("jsonwebtoken");
 const moddle = require("./middleware/auth");
 const { userAuth } = require("./middleware/auth");
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser()); // middleware to read cookies
+
+
 // --------------------- AUTH MIDDLEWARE ---------------------
 // const auth = (req, res, next) => {
 //   try {
@@ -103,7 +105,7 @@ app.get("/profile", userAuth, async (req, res) => {
     res.status(400).send("ERROR : " + err.message);
   }
 });
-
+ 
 // --------------------- send Connection Request ---------------------
 app.post("/sendConnectionRequest" , userAuth, async(req,res) => {
   const user = req.user;
