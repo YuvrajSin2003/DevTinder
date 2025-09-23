@@ -22,4 +22,23 @@ const validateSignUpData = (req) => {
     }
 };
 
-module.exports = validateSignUpData;
+
+// ----------------- Validate edit profile credential -----------------
+
+const validateEditProfileData = (req) => {
+    const allowedData = [
+        "firstName",
+        "lastName",
+        "emailId",
+        "photoUrl",
+        "gender",
+        "age",
+        "about",
+        "skills",
+    ];
+    const isEditAllowed = Object.keys(req.body).every((field) =>  allowedData.includes(field));
+
+    return isEditAllowed;
+}
+
+module.exports = {validateSignUpData , validateEditProfileData};
