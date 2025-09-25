@@ -21,6 +21,7 @@ const userAuth = async (req, res, next) => {
     }
 
     // attach user to request
+    req.userId = user._id;   // ✅ fixes your route
     req.user = user;
     next();
   } catch (err) {
