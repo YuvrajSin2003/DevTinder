@@ -4,6 +4,9 @@ const { userAuth } = require("../middleware/auth");
 const ConnectionRequest = require("../models/connectionRequest");
 const User = require("../models/user");
 
+
+//-------------------Sender Connection Request-------------------//
+
 requestRouter.post(
   "/request/send/:status/:toUserId",
   userAuth,
@@ -19,11 +22,10 @@ requestRouter.post(
       }
 
       const user = await User.findById(toUserId);
-      if(!user){
-        return res.send(404).json({message: "User Not Found"})
-      } 
+      if (!user) {
+        return res.status(404).json({ message: "User Not Found" });
+      }
 
-      // Validation of the existing connection Request
       const existingConnectionRequest = await ConnectionRequest.findOne({
         $or: [
           { fromUserId, toUserId },
@@ -43,7 +45,7 @@ requestRouter.post(
 
       const data = await connectionRequest.save();
       res.json({
-        message: req.user.firstName + " is " + status + " in"  + toUserId.firstName,
+        message: `${req.user.firstName} is ${status} in ${user.firstName}`,
         data
       });
     } catch (err) {
@@ -51,6 +53,42 @@ requestRouter.post(
     }
   }
 );
+
+
+
+//-------------------Reciver Connection Request-------------------//
+
+requestRouter.post("/request/review/:status/:requestId", userAuth , async (req, res) => {
+  try {
+    const loggedInUserId = req.userId;
+    const { status, requestId } = req.params;
+
+    // check the status valid
+    const allowedStatus = ["ignored", "accepted"];
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({ message: "Status is not allowed" });
+    }
+    
+    const connectionRequest = await ConnectionRequest.findOne({
+      _id: requestId,
+      toUserId: loggedInUserId,
+      status: "interested",
+    });
+
+    if (!connectionRequest) {
+      return res.status(404).json({ message: "No pending request found" });
+    }
+
+    connectionRequest.status = status;
+    const data = await connectionRequest.save();
+
+    res.json({ message: "Connection request " + status, data });
+  } catch (err) {
+    res.status(400).send("ERROR: " + err.message);
+  }
+});
+
+
 
 
 
