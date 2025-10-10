@@ -12,7 +12,7 @@ const userRouter = require("./routes/user");
 
 app.use(cors({
   origin:"http://localhost:5173",
-  credentials:true,ds
+  credentials:true,
 })); // middleware to handle CORS issues
 app.use(express.json());
 app.use(cookieParser()); // middleware to read cookies
